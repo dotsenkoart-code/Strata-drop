@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Strata Drop | Elevator Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest_drop.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        /* --- CORE LAYOUT --- */
+        html, body { overscroll-behavior-y: none; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; padding: 0; margin: 0; overflow: hidden; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+        .slide-container { display: flex; transition: transform 0.3s ease-in-out; width: 300vw; height: calc(100vh - 65px); }
+        .slide { width: 100vw; height: 100%; box-sizing: border-box; overflow-y: auto; padding: 15px 15px 120px 15px; }
+        
+        .card { background: #121212; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #2a2a2a; }
+        .critical-card { background: #0a1118; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 2px solid #0cf; box-shadow: 0 0 15px rgba(0, 204, 255, 0.1); }
+        
+        /* --- NAVBAR --- */
+        .navbar { height: 65px; background: #080808; display: flex; border-top: 1px solid #333; position: fixed; bottom: 0; width: 100%; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; color: #666; cursor: pointer; letter-spacing: 1px; }
+        .nav-item.active { color: #0cf; border-top: 2px solid #0cf; background: #111; }
+        .nav-item.locked { opacity: 0.4; pointer-events: none; }
+
+        input[type="text"], input[type="number"], select { width: 100%; padding: 15px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 1.2rem; text-align: center; box-sizing: border-box; }
+        input:disabled, select:disabled { background: #1a1a1a; color: #555; border-color: #333; }
+        label { font-size: 0.75rem; color: #888; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 5px; letter-spacing: 1px; }
+
+        /* --- STEPPER --- */
+        .stepper-box { background: #1a1a1a; border-radius: 8px; border: 1px solid #333; padding: 5px; margin-bottom: 15px; }
+        .stepper-row { display: flex; align-items: center; justify-content: space-between; height: 70px; }
+        .step-btn { width: 70px; height: 100%; background: #252525; border: none; color: #fff; font-size: 2.5rem; font-weight: 300; cursor: pointer; border-radius: 6px; }
+        .step-val { font-size: 2.5rem; font-weight: 900; color: #fff; text-align: center; flex: 1; }
+
+        /* --- ELEVATOR DIAGNOSE UI --- */
+        .floor-banner { background: #111; padding: 15px; border-radius: 8px; border: 2px solid #0cf; text-align: center; margin-bottom: 15px; }
+        .floor-id { font-size: 4rem; font-weight: 900; color: #0cf; letter-spacing: 2px; margin: 0; line-height: 1; }
+        
+        .pos-row { display: flex; gap: 8px; margin-bottom: 15px; }
+        .pos-btn { flex: 1; padding: 25px 10px; background: #222; border: 2px solid #444; color: #666; font-size: 1.8rem; font-weight: 900; cursor: pointer; border-radius: 8px; transition: 0.1s; }
+        .pos-btn.active { background: #0cf; color: #000; border-color: #fff; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0, 204, 255, 0.4); }
+
+        .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .check-item { background: #1a1a1a; padding: 20px 5px; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 800; border: 2px solid #333; color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1.2; transition: 0.1s; }
+        .check-item.active { background: #f39c12; color: #000; border-color: #fff; }
+        .check-item.sound-box.active { background: #28a745; color: #fff; border-color: #fff; }
+
+        .moisture-panel { background: #1a1a1a; border: 2px solid #d9534f; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: none; text-align: center; }
+
+        .action-btn { width: 100%; border-radius: 8px; border: none; font-weight: 900; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+        .btn-log { background: #007bff; padding: 25px; font-size: 1.5rem; border: 2px solid #0056b3; }
+        .btn-descend { background: #d9534f; padding: 35px; font-size: 2rem; border: 2px solid #b00; box-shadow: 0 10px 20px rgba(217, 83, 79, 0.3); margin-top: 10px; }
+        .btn-green { background: #28a745; padding: 20px; font-size: 1.2rem; }
+        .btn-dark { background: #333; border: 1px solid #555; color: #aaa; padding: 20px; font-size: 1.2rem; }
+        .btn-red { background: #d9534f; padding: 20px; font-size: 1.2rem; }
+        
+        .pattern-btn { flex: 1; padding: 20px; background: #222; border: 2px solid #444; color: #666; font-size: 1rem; font-weight: 900; cursor: pointer; border-radius: 6px; }
+        .pattern-btn.active { background: #0cf; color: #000; border-color: #fff; }
+
+        /* --- TOAST NOTIFICATION --- */
+        #toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #28a745; color: #fff; padding: 15px 30px; border-radius: 30px; font-weight: 900; font-size: 1.2rem; z-index: 9999; transition: top 0.3s ease-in-out; box-shadow: 0 10px 25px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; color: #ccc; }
+        td, th { border: 1px solid #333; padding: 10px; text-align: left; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-box { background: #111; border: 2px solid #444; border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
+    </style>
+</head>
+<body onload="initApp()">
+
+    <div id="toast">✅ LOGGED: A-12-L</div>
+
+    <div id="wipeModal" class="modal-overlay">
+        <div class="modal-box" style="border-color:#b00;">
+            <h2 style="color:#d9534f; margin-top:0; font-size: 2rem;">🚨 WIPE DATA?</h2>
+            <p style="color:#ccc; font-size:1.1rem; margin-bottom:25px;">Permanently delete all logged findings?<br><br><strong>Did you export the CSV?</strong></p>
+            <button class="action-btn btn-dark" onclick="closeWipeModal()">🔙 CANCEL</button>
+            <button class="action-btn btn-red" onclick="confirmWipe()">🚨 WIPE ALL DATA</button>
+        </div>
+    </div>
+
+    <div class="slide-container" id="mainSlider">
+        
+        <div class="slide" id="slide-setup">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="color:#fff; margin:0; font-size:1.5rem;">DROP LOGISTICS</h2>
+                <button id="btn-unlock" class="btn-dark" style="display:none; padding: 10px 15px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; width:auto; margin:0;" onclick="unlockSetup()">✏️ EDIT</button>
+            </div>
+            
+            <div class="card">
+                <label>Project Name</label>
+                <input type="text" id="projectID" class="setup-input" placeholder="e.g. Maple Tower" style="margin-bottom:12px;">
+                <label>Technician Name</label>
+                <input type="text" id="techName" class="setup-input" placeholder="e.g. John Doe">
+            </div>
+
+            <div class="critical-card">
+                <label style="color:#0cf;">Drop ID (Letter)</label>
+                <input type="text" id="dropLetter" class="setup-input" style="font-size: 2rem; font-weight: 900; border-color: #0cf; text-transform: uppercase; margin-bottom: 15px;" placeholder="A" oninput="updatePreview()">
+
+                <label style="color:#888;">Starting Floor Level</label>
+                <div class="stepper-box">
+                    <div class="stepper-row">
+                        <button class="step-btn setup-input" onclick="stepFloor(-1)">−</button>
+                        <div class="step-val" id="floorNumVal">12</div>
+                        <button class="step-btn setup-input" onclick="stepFloor(1)">+</button>
+                    </div>
+                    <input type="hidden" id="floorNum" value="12">
+                </div>
+                
+                <label style="color:#888;">Drop Pattern</label>
+                <div style="display:flex; gap: 8px; margin-bottom:10px;">
+                    <button class="pattern-btn setup-input active" id="pat3" onclick="setPattern('3')">3-WIN</button>
+                    <button class="pattern-btn setup-input" id="pat2" onclick="setPattern('2')">2-WIN</button>
+                    <button class="pattern-btn setup-input" id="pat1" onclick="setPattern('1')">1-WIN</button>
+                </div>
+            </div>
+            
+            <button id="btn-commit" class="action-btn btn-green" onclick="lockInDrop()">🚀 LOCK IN DROP</button>
+            <input type="hidden" id="dropPattern" value="3">
+        </div>
+
+        <div class="slide" id="slide-diagnose">
+            
+            <div class="floor-banner">
+                <span style="color:#888; font-weight:800; font-size: 1rem; letter-spacing: 2px;">CURRENT FLOOR</span>
+                <div id="displayCurrentFloor" class="floor-id">12</div>
+                <div style="color:#0cf; font-weight:bold; margin-top:5px;">DROP: <span id="displayDropLetter">A</span></div>
+            </div>
+
+            <label style="text-align: center; color: #888;">WINDOW POSITION</label>
+            <div class="pos-row" id="posSelectorRow"></div>
+
+            <div class="check-grid">
+                <div class="check-item sound-box active" id="soundBtn" onclick="toggleSound()" style="grid-column: span 2; padding: 20px; font-size: 1.2rem;">✅ ALL CLEAR</div>
+                <div class="check-item defect" id="moistureDetectBtn" onclick="toggleDefect(this)">💧 MOISTURE</div>
+                <div class="check-item defect" onclick="toggleDefect(this)">🔍 LEAK SUSPECT</div>
+                <div class="check-item defect" onclick="toggleDefect(this)">🛑 SEALANT FAIL</div>
+                <div class="check-item defect" onclick="toggleDefect(this)">📏 GASKET GAP</div>
+                <div class="check-item defect" onclick="toggleDefect(this)">☁️ IGU FOG</div>
+                <div class="check-item defect" onclick="toggleDefect(this)">💥 GLASS CRACK</div>
+            </div>
+
+            <div class="moisture-panel" id="groundTruthCard">
+                <label style="color:#d9534f; margin-bottom:8px;">SURVEYMASTER CONFIRMATION</label>
+                <div class="check-item" id="meterProvedBtn" onclick="toggleMeter(this)" style="width: 100%; height: 70px; font-size: 1.3rem; border:2px solid #555; margin: 0; box-sizing: border-box;">
+                    PENDING: TAP TO VERIFY
+                </div>
+            </div>
+
+            <button class="action-btn btn-log" onclick="executeLog()">💾 LOG WINDOW</button>
+            
+            <button class="action-btn btn-descend" onclick="descendFloor()">▼ DESCEND FLOOR</button>
+        </div>
+
+        <div class="slide" id="slide-command">
+            <div class="card" style="padding:0;">
+                <label style="padding:15px; display:block; font-size: 1.2rem; color: #0cf;">DATA VAULT</label>
+                <div style="overflow-x:auto; max-height:60vh; border-top:1px solid #333;">
+                    <table id="logTable">
+                        <thead style="background:#222;">
+                            <tr>
+                                <th>ID</th>
+                                <th>Finds</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button class="action-btn btn-green" onclick="exportCSV()">📤 EXPORT CSV DATA</button>
+            <button class="action-btn btn-red" onclick="openWipeModal()">🚨 WIPE DEVICE MEMORY</button>
+        </div>
+    </div>
+
+    <div class="navbar">
+        <div class="nav-item active" id="nav-0" onclick="goToSlide(0)">1. SETUP</div>
+        <div class="nav-item locked" id="nav-1" onclick="goToSlide(1)">2. PANEL</div>
+        <div class="nav-item locked" id="nav-2" onclick="goToSlide(2)">3. VAULT</div>
+    </div>
+
+    <script>
+        let currentPos = "L";
+        const patternConfigs = { "3": ['L', 'C', 'R'], "2": ['L', 'R'], "1": ['C'] };
+
+        function initApp() {
+            if (localStorage.getItem('dropVault')) {
+                document.getElementById('logTable').querySelector('tbody').innerHTML = localStorage.getItem('dropVault');
+            }
+            if (localStorage.getItem('isDropLocked') === 'true') {
+                if (localStorage.getItem('dropState')) {
+                    const savedState = JSON.parse(localStorage.getItem('dropState'));
+                    document.getElementById('projectID').value = savedState.project || "";
+                    document.getElementById('techName').value = savedState.tech || "";
+                    document.getElementById('dropLetter').value = savedState.drop || "";
+                    document.getElementById('floorNum').value = savedState.floor || "12";
+                    document.getElementById('floorNumVal').innerText = savedState.floor || "12";
+                    setPattern(savedState.pattern, savedState.pos);
+                }
+                
+                document.querySelectorAll('.setup-input').forEach(el => el.disabled = true);
+                document.getElementById('btn-commit').style.display = 'none';
+                document.getElementById('btn-unlock').style.display = 'block';
+                document.getElementById('nav-1').classList.remove('locked');
+                document.getElementById('nav-2').classList.remove('locked');
+                goToSlide(1);
+            } else {
+                setPattern('3'); 
+            }
+        }
+
+        function lockInDrop() {
+            const p = document.getElementById('projectID').value;
+            const t = document.getElementById('techName').value;
+            const d = document.getElementById('dropLetter').value;
+
+            if(!p || !t || !d) {
+                alert("⚠️ Please enter Project, Tech Name, and Drop ID before locking in.");
+                return;
+            }
+            
+            document.querySelectorAll('.setup-input').forEach(el => el.disabled = true);
+            document.getElementById('btn-commit').style.display = 'none';
+            document.getElementById('btn-unlock').style.display = 'block';
+            
+            document.getElementById('nav-1').classList.remove('locked');
+            document.getElementById('nav-2').classList.remove('locked');
+            
+            localStorage.setItem('isDropLocked', 'true');
+            saveLocationState();
+            goToSlide(1); 
+        }
+
+        function unlockSetup() {
+            if(confirm("⚠️ Unlock setup? Only do this to fix a typo in the Drop ID or Project Name.")) {
+                document.querySelectorAll('.setup-input').forEach(el => el.disabled = false);
+                document.getElementById('btn-commit').style.display = 'block';
+                document.getElementById('btn-unlock').style.display = 'none';
+                localStorage.setItem('isDropLocked', 'false');
+            }
+        }
+
+        function saveLocationState() {
+            const s = {
+                project: document.getElementById('projectID').value,
+                tech: document.getElementById('techName').value,
+                drop: document.getElementById('dropLetter').value,
+                floor: document.getElementById('floorNum').value,
+                pattern: document.getElementById('dropPattern').value,
+                pos: currentPos
+            };
+            localStorage.setItem('dropState', JSON.stringify(s));
+        }
+
+        function updatePreview() {
+            const f = document.getElementById('floorNum').value || 0;
+            const d = document.getElementById('dropLetter').value.toUpperCase() || "X";
+            document.getElementById('displayCurrentFloor').innerText = f;
+            document.getElementById('displayDropLetter').innerText = d;
+        }
+
+        function stepFloor(val) {
+            const el = document.getElementById('floorNum');
+            let current = parseInt(el.value) || 0;
+            let newVal = current + val;
+            el.value = newVal;
+            document.getElementById('floorNumVal').innerText = newVal;
+            updatePreview(); 
+            saveLocationState();
+        }
+
+        function setPattern(val, forcePos = null) {
+            document.getElementById('dropPattern').value = val;
+            document.querySelectorAll('.pattern-btn').forEach(b => b.classList.toggle('active', b.id === 'pat' + val));
+            
+            const row = document.getElementById('posSelectorRow');
+            row.innerHTML = ''; 
+            
+            currentPos = forcePos ? forcePos : patternConfigs[val][0];
+            
+            patternConfigs[val].forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = `pos-btn ${p === currentPos ? 'active' : ''}`;
+                btn.innerText = p;
+                btn.onclick = () => movePosition(p);
+                row.appendChild(btn);
+            });
+            
+            updatePreview();
+            saveLocationState(); 
+        }
+
+        function movePosition(p) {
+            currentPos = p;
+            Array.from(document.getElementById('posSelectorRow').children).forEach(b => {
+                b.classList.toggle('active', b.innerText === p);
+            });
+            saveLocationState();
+        }
+
+        function descendFloor() {
+            stepFloor(-1);
+            const pat = document.getElementById('dropPattern').value;
+            movePosition(patternConfigs[pat][0]); // Auto-reset to first position (usually L)
+            toggleSound(); // Auto-clear the defect board
+            
+            // Visual feedback for descent
+            const banner = document.querySelector('.floor-banner');
+            banner.style.borderColor = '#28a745';
+            setTimeout(() => { banner.style.borderColor = '#0cf'; }, 400);
+        }
+
+        function toggleSound() {
+            document.getElementById('soundBtn').classList.add('active');
+            document.querySelectorAll('.defect').forEach(el => el.classList.remove('active'));
+            document.getElementById('groundTruthCard').style.display = 'none';
+            document.getElementById('meterProvedBtn').classList.remove('active');
+        }
+
+        function toggleDefect(el) {
+            el.classList.toggle('active');
+            if (document.querySelectorAll('.defect.active').length > 0) {
+                document.getElementById('soundBtn').classList.remove('active');
+            } else {
+                document.getElementById('soundBtn').classList.add('active');
+            }
+            const mBtn = document.getElementById('moistureDetectBtn');
+            document.getElementById('groundTruthCard').style.display = (mBtn.classList.contains('active')) ? 'block' : 'none';
+        }
+
+        function toggleMeter(el) {
+            el.classList.toggle('active');
+            if(el.classList.contains('active')) {
+                el.style.background = '#28a745'; el.style.color='#fff'; el.innerText = 'VERIFIED (YES)';
+            } else {
+                el.style.background = '#222'; el.style.color='#888'; el.innerText = 'PENDING: TAP TO VERIFY';
+            }
+        }
+
+        function showToast(id) {
+            const toast = document.getElementById('toast');
+            toast.innerText = `✅ LOGGED: ${id}`;
+            toast.style.top = '20px';
+            setTimeout(() => { toast.style.top = '-100px'; }, 1500);
+        }
+
+        function executeLog() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2,'0') + ":" + 
+                            now.getMinutes().toString().padStart(2,'0') + ":" + 
+                            now.getSeconds().toString().padStart(2,'0');
+
+            const proj = document.getElementById('projectID').value || "No Project";
+            const tech = document.getElementById('techName').value || "Tech";
+            const f = document.getElementById('floorNum').value;
+            const d = document.getElementById('dropLetter').value.toUpperCase();
+            const id = `${d}-${f}-${currentPos}`;
+            
+            let finds = [];
+            document.querySelectorAll('.check-item.active').forEach(el => {
+                let cleanText = el.innerText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g, '').trim();
+                finds.push(cleanText);
+            });
+            if(finds.length === 0) finds.push("ALL CLEAR"); 
+
+            let proved = "N/A";
+            if(document.getElementById('groundTruthCard').style.display === 'block') {
+                proved = document.getElementById('meterProvedBtn').classList.contains('active') ? "YES" : "NO";
+            }
+
+            // Write Hidden Data to CSV for Office App, Show Clean Data on Phone
+            const row = `<tr>
+                <td style="display:none;">${proj}</td>
+                <td style="display:none;">${tech}</td>
+                <td style="color:#0cf; font-weight:900; font-size:1.1rem;">${id}</td>
+                <td style="color:${finds.includes('ALL CLEAR') ? '#28a745' : '#f39c12'}; font-weight:bold;">${finds.join(' | ')}</td>
+                <td style="display:none;">${proved}</td>
+                <td style="color:#888;">${timeStr}</td>
+            </tr>`;
+            
+            document.getElementById('logTable').querySelector('tbody').insertAdjacentHTML('afterbegin', row);
+            localStorage.setItem('dropVault', document.getElementById('logTable').querySelector('tbody').innerHTML);
+            
+            showToast(id);
+            toggleSound(); 
+        }
+
+        function exportCSV() {
+            let csv = "Project,Technician,Drop ID,Findings,Meter Proved,Timestamp\n";
+            document.querySelectorAll("#logTable tbody tr").forEach(tr => {
+                const cols = Array.from(tr.querySelectorAll("td"));
+                csv += cols.map(td => `"${td.textContent.trim()}"`).join(",") + "\n";
+            });
+            
+            const proj = document.getElementById('projectID').value || "Project";
+            const drop = document.getElementById('dropLetter').value.toUpperCase() || "Drop";
+            const fileName = `StrataDrop_${proj}_Drop${drop}.csv`.replace(/\s+/g, '_');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = fileName; 
+            a.click();
+        }
+
+        function openWipeModal() { document.getElementById('wipeModal').style.display = 'flex'; }
+        function closeWipeModal() { document.getElementById('wipeModal').style.display = 'none'; }
+        
+        function confirmWipe() { 
+            localStorage.removeItem('dropVault'); 
+            localStorage.removeItem('dropState'); 
+            localStorage.setItem('isDropLocked', 'false'); 
+
+            document.querySelector('#logTable tbody').innerHTML = '';
+            document.querySelectorAll('.setup-input').forEach(el => el.disabled = false);
+            
+            document.getElementById('btn-commit').style.display = 'block';
+            document.getElementById('btn-unlock').style.display = 'none';
+            document.getElementById('nav-1').classList.add('locked');
+            document.getElementById('nav-2').classList.add('locked');
+
+            closeWipeModal();
+            goToSlide(0); 
+        }
+
+        function goToSlide(n) {
+            if (n > 0 && localStorage.getItem('isDropLocked') !== 'true') {
+                alert("⚠️ PRE-FLIGHT REQUIRED: You must lock in your logistics before diagnosing.");
+                return;
+            }
+            document.getElementById('mainSlider').style.transform = `translateX(-${n * 100}vw)`;
+            document.querySelectorAll('.nav-item').forEach((el, i) => el.classList.toggle('active', i === n));
+        }
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw_drop.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>
