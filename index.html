@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Strata Drop | 2-Step Engine</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="manifest" href="manifest_drop.json">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -232,6 +232,11 @@
             const t = document.getElementById('techName').value;
             const d = document.getElementById('dropLetter').value;
 
+            // Force Android into absolute fullscreen
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch((e) => console.log(e));
+            }
+
             if(!p || !t || !d) {
                 alert("⚠️ Please enter Project, Tech Name, and Drop ID before locking in.");
                 return;
@@ -323,15 +328,15 @@
                 b.classList.toggle('active', b.innerText === p);
             });
             saveLocationState();
-            resetTwoStepUI(); // Reset the lock if they move sideways
+            resetTwoStepUI(); 
         }
 
         function descendFloor() {
-            buzz([100, 50, 100]); // Heavy double-pulse buzz for descent
+            buzz([100, 50, 100]); 
             stepFloor(-1);
             const pat = document.getElementById('dropPattern').value;
-            movePosition(patternConfigs[pat][0]); // Auto-reset to position L
-            resetTwoStepUI(); // Reset the lock for the new floor
+            movePosition(patternConfigs[pat][0]); 
+            resetTwoStepUI(); 
             
             const banner = document.querySelector('.floor-banner');
             banner.style.borderColor = '#28a745';
@@ -348,7 +353,7 @@
 
         // STEP 1: FREEZE THE CLOCK
         function triggerTimeLock() {
-            buzz([50]); // Quick buzz confirming time lock
+            buzz([50]); 
             const now = new Date();
             lockedTimeStr = now.getHours().toString().padStart(2,'0') + ":" + 
                             now.getMinutes().toString().padStart(2,'0') + ":" + 
@@ -361,7 +366,7 @@
 
         // STEP 2: LOG THE GUESS
         function executeLog(guessText, colorHex) {
-            buzz([50, 50]); // Double quick buzz for successful save
+            buzz([50, 50]); 
 
             const proj = document.getElementById('projectID').value || "No Project";
             const tech = document.getElementById('techName').value || "Tech";
@@ -369,7 +374,6 @@
             const d = document.getElementById('dropLetter').value.toUpperCase();
             const id = `${d}-${f}-${currentPos}`;
             
-            // Write the row using the frozen time from Step 1
             const row = `<tr>
                 <td style="display:none;">${proj}</td>
                 <td style="display:none;">${tech}</td>
@@ -382,7 +386,7 @@
             localStorage.setItem('dropVault', document.getElementById('logTable').querySelector('tbody').innerHTML);
             
             showToast(id, guessText, colorHex);
-            resetTwoStepUI(); // Instantly reset back to Step 1 for the next window
+            resetTwoStepUI(); 
         }
 
         function exportCSV() {
