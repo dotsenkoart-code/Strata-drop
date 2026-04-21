@@ -1,4 +1,4 @@
-const CACHE_NAME = 'strata-drop-v1';
+const CACHE_NAME = 'strata-drop-v2';
 const urlsToCache = [
   './',
   './index.html',
