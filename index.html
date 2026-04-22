@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Strata Drop | 2-Step Engine</title>
+    <title>Strata Drop | Failsafe Engine</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="manifest" href="manifest_drop.json">
     <meta name="theme-color" content="#000000">
@@ -10,8 +10,17 @@
 
     <style>
         /* --- CORE LAYOUT --- */
-        html, body { overscroll-behavior-y: none; }
+        html, body { overscroll-behavior-y: none; transition: box-shadow 0.3s; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; padding: 0; margin: 0; overflow: hidden; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+        
+        /* THE PERIPHERAL GLOW */
+        @keyframes border-glow-orange {
+            0% { box-shadow: inset 0 0 0px #f39c12; }
+            50% { box-shadow: inset 0 0 25px #f39c12; }
+            100% { box-shadow: inset 0 0 0px #f39c12; }
+        }
+        body.pending-glow { animation: border-glow-orange 1.5s infinite; }
+
         .slide-container { display: flex; transition: transform 0.3s ease-in-out; width: 300vw; height: calc(100vh - 65px); }
         .slide { width: 100vw; height: 100%; box-sizing: border-box; overflow-y: auto; padding: 15px 15px 120px 15px; }
         
@@ -43,7 +52,8 @@
         .pos-btn.active { background: #0cf; color: #000; border-color: #fff; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0, 204, 255, 0.4); }
 
         /* --- 2-STEP TRIGGER UI --- */
-        .step-1-btn { width: 100%; background: #007bff; padding: 40px 20px; font-size: 1.6rem; border: 2px solid #0056b3; border-radius: 8px; font-weight: 900; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2); margin-bottom: 15px; }
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); } }
+        .step-1-btn { width: 100%; background: #007bff; padding: 40px 20px; font-size: 1.6rem; border: 2px solid #0056b3; border-radius: 8px; font-weight: 900; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; animation: pulse-blue 2s infinite; margin-bottom: 15px; }
         
         .step-2-container { display: none; flex-direction: column; gap: 10px; margin-bottom: 15px; background: #111; padding: 15px; border-radius: 8px; border: 2px solid #f39c12; }
         .locked-time-label { text-align: center; color: #f39c12; font-weight: 900; font-size: 1.1rem; margin-bottom: 10px; letter-spacing: 2px; }
@@ -58,6 +68,7 @@
         
         .btn-green-sm { background: #28a745; padding: 20px; font-size: 1.2rem; }
         .btn-dark { background: #333; border: 1px solid #555; color: #aaa; padding: 20px; font-size: 1.2rem; }
+        .btn-blue-sm { background: #007bff; border: 1px solid #0056b3; color: #fff; padding: 10px 15px; font-size: 0.9rem; border-radius: 6px; }
         .btn-red-sm { background: #d9534f; padding: 20px; font-size: 1.2rem; }
         
         .pattern-btn { flex: 1; padding: 20px; background: #222; border: 2px solid #444; color: #666; font-size: 1rem; font-weight: 900; cursor: pointer; border-radius: 6px; }
@@ -86,12 +97,27 @@
         </div>
     </div>
 
+    <div id="sopModal" class="modal-overlay">
+        <div class="modal-box" style="border-color:#0cf; text-align: left;">
+            <h2 style="color:#0cf; margin-top:0; font-size: 1.8rem; text-align: center; text-transform: uppercase;">📋 Pre-Flight SOP</h2>
+            <ul style="color:#ccc; font-size:1.1rem; padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
+                <li style="margin-bottom: 15px;"><strong>CALIBRATION SHOT:</strong> Take a thermal picture of this phone screen's clock (showing seconds) <i>before</i> going over the edge.</li>
+                <li style="margin-bottom: 15px;"><strong>THE SILO RULE:</strong> Do not mix SD cards. One tech = One Phone + One FLIR.</li>
+                <li><strong>THE FLOW:</strong> <br>1. Lock Timestamp <br>2. Snap FLIR Photos <br>3. Log Field Guess</li>
+            </ul>
+            <button class="action-btn" style="background: #0cf; color: #000; padding: 20px; font-size: 1.2rem;" onclick="closeSOPModal()">✅ COPY THAT</button>
+        </div>
+    </div>
+
     <div class="slide-container" id="mainSlider">
         
         <div class="slide" id="slide-setup">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h2 style="color:#fff; margin:0; font-size:1.5rem;">DROP LOGISTICS</h2>
-                <button id="btn-unlock" class="btn-dark" style="display:none; padding: 10px 15px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; width:auto; margin:0;" onclick="unlockSetup()">✏️ EDIT</button>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-blue-sm" style="font-weight: bold;" onclick="openSOPModal()">📋 SOP</button>
+                    <button id="btn-unlock" class="btn-dark" style="display:none; padding: 10px 15px; border-radius: 6px; font-size: 0.9rem; font-weight: bold;" onclick="unlockSetup()">✏️ EDIT</button>
+                </div>
             </div>
             
             <div class="card">
@@ -184,20 +210,13 @@
         let wakeLock = null;
         const patternConfigs = { "3": ['L', 'C', 'R'], "2": ['L', 'R'], "1": ['C'] };
 
-        // Keep Screen Awake Function
         async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {}
+            try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } 
+            catch (err) {}
         }
 
-        // Haptic Feedback Helper
         function buzz(pattern) {
-            if ("vibrate" in navigator) {
-                navigator.vibrate(pattern);
-            }
+            if ("vibrate" in navigator) navigator.vibrate(pattern);
         }
 
         function initApp() {
@@ -214,7 +233,6 @@
                     document.getElementById('floorNumVal').innerText = savedState.floor || "12";
                     setPattern(savedState.pattern, savedState.pos);
                 }
-                
                 document.querySelectorAll('.setup-input').forEach(el => el.disabled = true);
                 document.getElementById('btn-commit').style.display = 'none';
                 document.getElementById('btn-unlock').style.display = 'block';
@@ -222,9 +240,7 @@
                 document.getElementById('nav-2').classList.remove('locked');
                 requestWakeLock();
                 goToSlide(1);
-            } else {
-                setPattern('3'); 
-            }
+            } else { setPattern('3'); }
         }
 
         function lockInDrop() {
@@ -232,20 +248,15 @@
             const t = document.getElementById('techName').value;
             const d = document.getElementById('dropLetter').value;
 
-            // Force Android into absolute fullscreen
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch((e) => console.log(e));
             }
 
-            if(!p || !t || !d) {
-                alert("⚠️ Please enter Project, Tech Name, and Drop ID before locking in.");
-                return;
-            }
+            if(!p || !t || !d) { alert("⚠️ Please enter Project, Tech Name, and Drop ID."); return; }
             
             document.querySelectorAll('.setup-input').forEach(el => el.disabled = true);
             document.getElementById('btn-commit').style.display = 'none';
             document.getElementById('btn-unlock').style.display = 'block';
-            
             document.getElementById('nav-1').classList.remove('locked');
             document.getElementById('nav-2').classList.remove('locked');
             
@@ -256,7 +267,7 @@
         }
 
         function unlockSetup() {
-            if(confirm("⚠️ Unlock setup? Only do this to fix a typo in the Drop ID or Project Name.")) {
+            if(confirm("⚠️ Unlock setup?")) {
                 document.querySelectorAll('.setup-input').forEach(el => el.disabled = false);
                 document.getElementById('btn-commit').style.display = 'block';
                 document.getElementById('btn-unlock').style.display = 'none';
@@ -286,10 +297,8 @@
 
         function stepFloor(val) {
             const el = document.getElementById('floorNum');
-            let current = parseInt(el.value) || 0;
-            let newVal = current + val;
-            el.value = newVal;
-            document.getElementById('floorNumVal').innerText = newVal;
+            el.value = (parseInt(el.value) || 0) + val;
+            document.getElementById('floorNumVal').innerText = el.value;
             updatePreview(); 
             saveLocationState();
         }
@@ -297,10 +306,8 @@
         function setPattern(val, forcePos = null) {
             document.getElementById('dropPattern').value = val;
             document.querySelectorAll('.pattern-btn').forEach(b => b.classList.toggle('active', b.id === 'pat' + val));
-            
             const row = document.getElementById('posSelectorRow');
             row.innerHTML = ''; 
-            
             currentPos = forcePos ? forcePos : patternConfigs[val][0];
             
             patternConfigs[val].forEach(p => {
@@ -310,18 +317,21 @@
                 btn.onclick = () => movePosition(p);
                 row.appendChild(btn);
             });
-            
             updatePreview();
             saveLocationState(); 
         }
 
         function resetTwoStepUI() {
             lockedTimeStr = "";
+            document.body.classList.remove('pending-glow'); 
             document.getElementById('guess-container').style.display = 'none';
             document.getElementById('btn-lock-time').style.display = 'block';
         }
 
         function movePosition(p) {
+            if (lockedTimeStr !== "") { 
+                executeLog("⚪ FORGOT GUESS", "#888888"); 
+            }
             buzz([30]); 
             currentPos = p;
             Array.from(document.getElementById('posSelectorRow').children).forEach(b => {
@@ -332,6 +342,12 @@
         }
 
         function descendFloor() {
+            if (lockedTimeStr !== "") { 
+                executeLog("⚪ FORGOT GUESS", "#888888"); 
+            } else {
+                buzz([50, 50, 50, 50]); 
+            }
+            
             buzz([100, 50, 100]); 
             stepFloor(-1);
             const pat = document.getElementById('dropPattern').value;
@@ -351,7 +367,6 @@
             setTimeout(() => { toast.style.top = '-100px'; }, 1500);
         }
 
-        // STEP 1: FREEZE THE CLOCK
         function triggerTimeLock() {
             buzz([50]); 
             const now = new Date();
@@ -362,12 +377,11 @@
             document.getElementById('display-locked-time').innerText = `TIME LOCKED: ${lockedTimeStr}`;
             document.getElementById('btn-lock-time').style.display = 'none';
             document.getElementById('guess-container').style.display = 'flex';
+            document.body.classList.add('pending-glow');
         }
 
-        // STEP 2: LOG THE GUESS
         function executeLog(guessText, colorHex) {
             buzz([50, 50]); 
-
             const proj = document.getElementById('projectID').value || "No Project";
             const tech = document.getElementById('techName').value || "Tech";
             const f = document.getElementById('floorNum').value;
@@ -395,11 +409,9 @@
                 const cols = Array.from(tr.querySelectorAll("td"));
                 csv += cols.map(td => `"${td.textContent.trim()}"`).join(",") + "\n";
             });
-            
             const proj = document.getElementById('projectID').value || "Project";
             const drop = document.getElementById('dropLetter').value.toUpperCase() || "Drop";
             const fileName = `StrataDrop_${proj}_Drop${drop}.csv`.replace(/\s+/g, '_');
-
             const blob = new Blob([csv], { type: 'text/csv' });
             const a = document.createElement('a'); 
             a.href = URL.createObjectURL(blob); 
@@ -409,46 +421,37 @@
 
         function openWipeModal() { document.getElementById('wipeModal').style.display = 'flex'; }
         function closeWipeModal() { document.getElementById('wipeModal').style.display = 'none'; }
+
+        function openSOPModal() { document.getElementById('sopModal').style.display = 'flex'; }
+        function closeSOPModal() { document.getElementById('sopModal').style.display = 'none'; }
         
         function confirmWipe() { 
             localStorage.removeItem('dropVault'); 
             localStorage.removeItem('dropState'); 
             localStorage.setItem('isDropLocked', 'false'); 
-
             document.querySelector('#logTable tbody').innerHTML = '';
             document.querySelectorAll('.setup-input').forEach(el => el.disabled = false);
-            
             document.getElementById('btn-commit').style.display = 'block';
             document.getElementById('btn-unlock').style.display = 'none';
             document.getElementById('nav-1').classList.add('locked');
             document.getElementById('nav-2').classList.add('locked');
-
             closeWipeModal();
             goToSlide(0); 
         }
 
         function goToSlide(n) {
-            if (n > 0 && localStorage.getItem('isDropLocked') !== 'true') {
-                alert("⚠️ PRE-FLIGHT REQUIRED: You must lock in your logistics before tracking.");
-                return;
-            }
+            if (n > 0 && localStorage.getItem('isDropLocked') !== 'true') { alert("⚠️ PRE-FLIGHT REQUIRED"); return; }
             document.getElementById('mainSlider').style.transform = `translateX(-${n * 100}vw)`;
             document.querySelectorAll('.nav-item').forEach((el, i) => el.classList.toggle('active', i === n));
         }
 
-        // Re-request wake lock if tab is minimized and brought back
         document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                requestWakeLock();
-            }
+            if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock();
         });
     </script>
-
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw_drop.js').catch(() => {});
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw_drop.js').catch(() => {}); });
         }
     </script>
 </body>
