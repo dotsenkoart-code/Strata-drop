@@ -1,8 +1,10 @@
-const CACHE_NAME = 'strata-drop-v2';
+const CACHE_NAME = 'strata-drop-v5';
 const urlsToCache = [
   './',
   './index.html',
-  './manifest_drop.json'
+  './manifest_drop.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install the service worker and cache the files
